@@ -13,8 +13,11 @@ def main():
             line = line.strip()
             if not line:
                 continue
-            m = json.loads(line)
-            if not m.get("ok"):
+            try:
+                m = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(m, dict) or not m.get("ok"):
                 continue
             last = m
     rows = last["rows"] if last else []
