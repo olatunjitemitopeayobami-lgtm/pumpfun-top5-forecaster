@@ -1,7 +1,18 @@
+"""Deterministic forecaster for the make.fun pumpfun-top5-forecast-01 bounty.
+
+Reads task metadata and ranked history marks, then emits per-place mint
+probabilities, a top-5 list, and per-place size-bin probabilities.
+"""
+
 import json, math, os
 
 IN = os.environ.get("MAKEFUN_INPUT_DIR", "/input")
 OUT = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+EPS = 1e-6
+
+
+def clip_prob(p):
+    return min(max(p, EPS), 1.0 - EPS)
 
 
 def main():
@@ -57,9 +68,15 @@ def main():
             if p > 0:
                 sizes.append({"place": k, "bin": b, "p": p})
     top5 = [r["mint"] for r in rows if not (r["mayhem"] and r["venue"] != "pool")][:5]
+    # Keep output probabilities strictly inside (0, 1).
+    for item in plist:
+        item["p"] = clip_prob(item["p"])
+    for item in sizes:
+        item["p"] = clip_prob(item["p"])
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "forecast.json"), "w") as f:
         json.dump({"probabilities": plist, "top5": top5, "sizes": sizes}, f, sort_keys=True, separators=(",", ":"))
+        f.write("\n")
 
 
 main()
